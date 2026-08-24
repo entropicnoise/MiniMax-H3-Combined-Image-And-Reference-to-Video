@@ -12,21 +12,20 @@ from comfy_api.latest import io
 from comfy_extras.nodes_minimax_h3 import (
     _empty_av_latent,
     _resize,
-    MiniMaxH3ReferenceToVideo,
     adapt_canvas,
     CANVAS_MULTIPLE,
     REF_IMAGE_SHORT_EDGE,
     FPS,
 )
 
-
-def _encode_ref_audio(audio_vae, audio):
-    """Use ComfyUI's current MiniMax H3 reference-audio implementation.
-
-    In current ComfyUI this helper is a static method on
-    MiniMaxH3ReferenceToVideo rather than a module-level function.
-    """
-    return MiniMaxH3ReferenceToVideo._encode_ref_audio(audio_vae, audio)
+# ComfyUI compatibility:
+# - older H3 builds expose this as MiniMaxH3ReferenceToVideo._encode_ref_audio
+# - newer builds expose it directly as a module-level helper
+try:
+    from comfy_extras.nodes_minimax_h3 import _encode_ref_audio
+except ImportError:
+    from comfy_extras.nodes_minimax_h3 import MiniMaxH3ReferenceToVideo
+    _encode_ref_audio = MiniMaxH3ReferenceToVideo._encode_ref_audio
 
 
 _H3_PAYLOAD_PATCH_MARKER = "_minimax_h3_keyframe_ref_merge_patch_v2"
