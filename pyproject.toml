@@ -1,0 +1,17 @@
+[project]
+name = "comfyui-minimax-h3-image-and-reference-to-video"
+description = "A ComfyUI custom node for MiniMax H3 for combining I2I and Ref2I modes on FL2VA and REF2VA models, allowing to use start_frame and references in single prompt."
+version = "1.0.2"
+license = {file = "LICENSE"}
+
+[project.urls]
+Repository = "https://github.com/entropicnoise/MiniMax-H3-Combined-Image-And-Reference-to-Video"
+Documentation = "https://github.com/entropicnoise/MiniMax-H3-Combined-Image-And-Reference-to-Video/wiki"
+"Bug Tracker" = "https://github.com/entropicnoise/MiniMax-H3-Combined-Image-And-Reference-to-Video/issues"
+
+[tool.comfy]
+PublisherId = "bigstationw"
+DisplayName = "MiniMax-H3-Combined-Image-And-Reference-to-Video"
+Icon = ""
+includes = []
+# "requires-comfyui" = ">=1.0.0"
