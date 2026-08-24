@@ -19,6 +19,9 @@ The node is designed for workflows where target-timeline image guides and full-r
 > **Node:** `MiniMax H3 Combined Image And Reference to Video`
 
 ---
+## Screenshot
+
+<img width="376" height="363" alt="image" src="https://github.com/user-attachments/assets/70492cc2-a130-485a-bbb0-eac9dcd695a2" />
 
 ## Features
 
