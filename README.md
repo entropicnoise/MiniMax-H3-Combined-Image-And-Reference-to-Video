@@ -16,7 +16,7 @@ It supports:
 
 The node is designed for workflows where target-timeline image guides and full-reference identity / motion / audio guidance need to coexist in the same MiniMax H3 conditioning payload.
 
-> **Version:** 1.6  
+> **Version:** current development build (v1.7-based)  
 > **Node:** `MiniMax H3 Combined Image And Reference to Video`
 
 ---
@@ -34,9 +34,19 @@ The node combines the two main MiniMax H3 conditioning styles:
 
 Both modes can be used independently or together.
 
-### Single frame length for "to image" workflows
+### Single-frame length for "to image" workflows
 
-With length parameter set to 1 frame and 1-frame Minimax H3 VAE for image workflows, it can be used in "to image" workflows (MiniMax H3: T2I, REF2I, I2I).
+With `length = 1`, the node uses a true single-frame MiniMax H3 target latent (`video latent T=1`) and can be used for T2I, I2I, and Ref2I workflows.
+
+Target-frame image guides are also allowed at `length = 1`. Because the generated target contains only one frame, every connected guide resolves to the same target position:
+
+```text
+first_frame   -> frame 0
+middle_frame  -> frame 0
+last_frame    -> frame 0
+```
+
+The node intentionally passes connected guides through independently and does **not** deduplicate them. This makes combinations such as first+last or first+middle+last at frame 0 possible for experimentation. At `length = 1`, `middle_frame` is not marked as an interior keyframe, so the legacy interior-keyframe compatibility path is not activated.
 
 ### First / middle / last image guides
 
@@ -55,6 +65,8 @@ last_frame    -> frame 123
 ```
 
 At 24 fps, frame 62 is approximately 2.58 seconds into the generated clip.
+
+For `length = 1`, all connected target-frame guides resolve to frame 0. `middle_frame` is only treated as an interior guide when its resolved index is strictly between the first and last target frames.
 
 `middle_frame` is optional. When it is not connected, the node keeps the normal first/last path and does not activate the legacy interior-keyframe compatibility path.
 
@@ -108,6 +120,8 @@ MiniMax H3 Combined Image And Reference to Video
 
 ## Requirements
 
+- **ComfyUI v0.33.1 or newer**
+
 This node relies on MiniMax H3 support already present in ComfyUI, including the built-in H3 helpers and model implementation.
 
 It imports functionality from:
@@ -132,11 +146,85 @@ No separate Python package requirements are added by this node.
 | `vae` | Video/image VAE used for target images and reference visual latents |
 | `audio_vae` | Audio VAE used for reference audio |
 | `prompt` | MiniMax H3 multimodal prompt |
-| `width` | Output width |
-| `height` | Output height |
-| `length` | Output frame count |
+| `resolution_source` | Chooses whether output resolution comes first from target-frame images, visual references, or the provided width/height values |
+| `width` | Output width / fallback width |
+| `height` | Output height / fallback height |
+| `length` | Output frame count; `1` enables single-frame image workflows |
 
 `length` follows the MiniMax H3 frame grid used by ComfyUI. The node defaults to 124 frames.
+
+---
+
+## Generation resolution source
+
+`resolution_source` controls how the generation canvas is chosen.
+
+### `use width and height of source image first`
+
+Priority:
+
+```text
+first_frame
+→ middle_frame
+→ last_frame
+→ first ref_image
+→ first ref_video
+→ provided width / height
+```
+
+### `use width and height of reference image first`
+
+Priority:
+
+```text
+first ref_image
+→ first ref_video
+→ first_frame
+→ middle_frame
+→ last_frame
+→ provided width / height
+```
+
+### `use provided width and height values`
+
+Uses the explicit `width` and `height` fields. This preserves the original behavior.
+
+### `resize source (keep aspect ratio, fit mode: total pixels)`
+
+The first connected source guide (`first_frame → middle_frame → last_frame`) defines the source aspect ratio. It is scaled so the resulting canvas has approximately the same total pixel area as the provided `width × height`.
+
+This mode can **upscale or downscale**.
+
+### `resize source (keep aspect ratio, fit mode: shortest edge)`
+
+Preserves the first connected source guide's aspect ratio and scales it so its shortest edge matches the shortest edge of the provided width/height target.
+
+This mode can **upscale or downscale**.
+
+### `resize source (keep aspect ratio, fit mode: longest edge)`
+
+Preserves the first connected source guide's aspect ratio and scales it so its longest edge matches the longest edge of the provided width/height target.
+
+This mode can **upscale or downscale**.
+
+### `resize source (fit mode: stretch)`
+
+Uses the provided width/height canvas directly and stretches connected source guides to that canvas.
+
+### Multiple source guides
+
+For the three aspect-preserving source modes, the **first connected source guide** determines one shared generation canvas:
+
+```text
+first_frame → middle_frame → last_frame
+```
+
+All connected `first_frame`, `middle_frame`, and `last_frame` guides are then aspect-preserving cover-fitted into that shared canvas. In `stretch` mode, all connected source guides are stretched to the shared provided canvas.
+
+### 32-pixel alignment
+
+All resolved generation dimensions are corrected to multiples of **32** before latent creation and source-guide encoding.
+
 
 ---
 
@@ -152,7 +240,7 @@ It is conditioned at:
 frame 0
 ```
 
-The first frame follows the stock H3 first-frame geometry behavior and is resized directly to the requested output canvas.
+With the original resolution modes, the first frame keeps the stock H3 stretch-to-canvas behavior. With an aspect-preserving `resize source` mode, it is cover-fitted while preserving aspect ratio; `resize source (fit mode: stretch)` stretches it to the provided canvas.
 
 ### `middle_frame`
 
@@ -166,9 +254,9 @@ frame_count // 2
 
 This makes it an actual target-timeline guide rather than a general reference image.
 
-The image uses an aspect-preserving cover crop to the generated frame.
+The image is fitted to the resolved generation canvas. Aspect-preserving source modes use a cover fit; stretch mode stretches it to the canvas.
 
-> `middle_frame` is an extended workflow. Current H3 layout implementations can place keyframes at arbitrary target-frame indices. For older ComfyUI H3 cores that only accepted endpoint indices, this node contains a compatibility path that is activated only when an interior guide is present.
+> `middle_frame` is an extended workflow. Current H3 layout implementations can place keyframes at arbitrary target-frame indices. For older ComfyUI H3 cores that only accepted endpoint indices, this node contains a compatibility path that is activated only when an actual interior guide is present. At `length = 1`, `middle_frame` resolves to frame 0 and therefore does not activate that interior-guide path.
 
 ### `last_frame`
 
@@ -180,7 +268,7 @@ It is conditioned at:
 frame_count - 1
 ```
 
-The image uses an aspect-preserving cover crop.
+The image is fitted to the resolved generation canvas. Aspect-preserving source modes use a cover fit; stretch mode stretches it to the canvas.
 
 ---
 
@@ -538,19 +626,31 @@ For the normal first/last path, the node preserves the existing target-origin al
 
 Some older H3 layout implementations accepted only first/last endpoint indices.
 
-When `middle_frame` is present, the node conditionally uses a compatibility path that:
+When `middle_frame` resolves to a true interior target index, the node conditionally uses a compatibility path that:
 
 1. lets the legacy layout allocate the guide rows
 2. identifies the generated target video's temporal origin
 3. places the guide rows at their requested frame coordinates
 
-When `middle_frame` is not supplied, this interior-keyframe path is not activated.
+The interior-keyframe path is not activated when `middle_frame` is absent or when it resolves to an endpoint. In particular, at `length = 1`, first/middle/last all resolve to frame 0.
 
 On newer ComfyUI H3 implementations with native arbitrary keyframe positioning, no interior layout patch is required.
 
 ---
 
 ## Example configurations
+
+### Single-frame T2I / I2I / Ref2I
+
+```text
+length:        1
+first_frame:   optional
+middle_frame:  optional
+last_frame:    optional
+ref_image_1:   optional
+```
+
+At `length = 1`, every connected target-frame guide resolves to frame 0. Multiple guides are passed independently rather than merged or deduplicated.
 
 ### Text + references only
 
@@ -671,6 +771,17 @@ If you want appearance or identity guidance without fixing an image near the cen
 ---
 
 ## Version history
+
+### Current development build (v1.7-based)
+
+- added four source resize modes with both upscaling and downscaling
+- generation dimensions are always corrected to multiples of 32
+
+- confirmed true `length = 1` MiniMax H3 single-frame generation
+- allows `first_frame`, `middle_frame`, and `last_frame` at `length = 1`; all resolve to frame 0
+- avoids activating the legacy interior-guide patch when `middle_frame` resolves to an endpoint
+- added selectable generation-resolution source detection
+- added compatibility for both old and new `_encode_ref_audio` locations
 
 ### v1.6
 
