@@ -26,7 +26,7 @@ The node is designed for workflows where target-timeline image guides and full-r
 
 ## Features
 
-### 1 frame length for to image workflows
+### 1 frame length for "to image" workflows
 
 With length parameter set to 1 frame and 1-frame Minimax H3 VAE for image workflows, it can be used in "to image" workflows (MiniMax H3: T2I, REF2I, I2I).
 
