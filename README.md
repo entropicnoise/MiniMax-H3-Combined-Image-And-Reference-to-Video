@@ -12,7 +12,7 @@ It supports:
 - reference-video audio
 - standalone reference audio
 - MiniMax H3 reference tags such as `<Picture 1>`, `<Video 1>`, `<Audio 1>`, and `<Subject 1>`
-- T2V, I2V, Ref2V, T2I, I2I, REF2I MiniMax H3 workflows
+- T2V, I2V, Ref2V, T2I, I2I, ref2I MiniMax H3 workflows
 
 The node is designed for workflows where target-timeline image guides and full-reference identity / motion / audio guidance need to coexist in the same MiniMax H3 conditioning payload.
 
