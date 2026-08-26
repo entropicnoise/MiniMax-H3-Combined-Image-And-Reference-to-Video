@@ -21,8 +21,7 @@ The node is designed for workflows where target-timeline image guides and full-r
 
 ---
 ## Screenshot
-
-<img width="376" height="363" alt="image" src="https://github.com/user-attachments/assets/70492cc2-a130-485a-bbb0-eac9dcd695a2" />
+<img width="352" height="512" alt="image" src="https://github.com/user-attachments/assets/e0942afc-01c5-4c08-abe8-f025c9520104" />
 
 ## Features
 ### Combined image + reference conditioning
