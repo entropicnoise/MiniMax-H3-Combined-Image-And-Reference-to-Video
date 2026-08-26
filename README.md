@@ -31,9 +31,9 @@ The node combines the two main MiniMax H3 conditioning styles:
 
 - **Target-frame image guides** — first, middle, and last images are placed at specific positions on the generated video's timeline.
 - **Ref2VA references** — images, videos, and audio act as reference material without being assigned to a fixed output frame.
-- Text to Video
+- Text to Video (when no reference or images are supplied)
 
-with 1-frame VAE, and length set to 1 frame, it can be used in "to image" workflows (MiniMax H3: T2I, REF2I, I2I).
+with length set to 1 frame and  1-frame VAE for image workflows, it can be used in "to image" workflows (MiniMax H3: T2I, REF2I, I2I).
 
 Both systems can be used independently or together.
 
