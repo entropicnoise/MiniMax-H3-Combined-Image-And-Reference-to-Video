@@ -25,11 +25,6 @@ The node is designed for workflows where target-timeline image guides and full-r
 <img width="376" height="363" alt="image" src="https://github.com/user-attachments/assets/70492cc2-a130-485a-bbb0-eac9dcd695a2" />
 
 ## Features
-
-### 1 frame length for "to image" workflows
-
-With length parameter set to 1 frame and 1-frame Minimax H3 VAE for image workflows, it can be used in "to image" workflows (MiniMax H3: T2I, REF2I, I2I).
-
 ### Combined image + reference conditioning
 
 The node combines the two main MiniMax H3 conditioning styles:
@@ -39,6 +34,9 @@ The node combines the two main MiniMax H3 conditioning styles:
 
 Both modes can be used independently or together.
 
+### 1 frame length for "to image" workflows
+
+With length parameter set to 1 frame and 1-frame Minimax H3 VAE for image workflows, it can be used in "to image" workflows (MiniMax H3: T2I, REF2I, I2I).
 
 ### First / middle / last image guides
 
