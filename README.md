@@ -16,11 +16,9 @@ It supports:
 
 The node is designed for workflows where target-timeline image guides and full-reference identity / motion / audio guidance need to coexist in the same MiniMax H3 conditioning payload.
 
-> **Version:** current development build (v1.7-based)  
-> **Node:** `MiniMax H3 Combined Image And Reference to Video`
-
 ---
 ## Screenshot
+> **Node:** `MiniMax H3 Combined Image And Reference to Video`
 <img width="352" height="512" alt="image" src="https://github.com/user-attachments/assets/e0942afc-01c5-4c08-abe8-f025c9520104" />
 
 ## Features
