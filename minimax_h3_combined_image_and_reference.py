@@ -242,6 +242,34 @@ def _is_our_combined_keyframes(keyframes):
     )
 
 
+def _h3_has_native_arbitrary_keyframes():
+    """Return True for the current H3 PackedLayout API used by ComfyUI v0.34+.
+
+    Legacy H3 PackedLayout accepted ``frame_count`` and only understood endpoint
+    keyframes.  The newer implementation removes ``frame_count`` from the
+    constructor and places arbitrary ``resolved_frame_index`` guides natively.
+
+    That newer core also natively merges keyframe and Ref2VA video/audio latent
+    lists, so our old ``MiniMaxH3.extra_conds`` wrapper must not be installed
+    there.  In particular, installing the legacy wrapper on the new core can
+    overwrite audio latents supplied by MiniMaxH3AddGuide.
+    """
+    try:
+        import comfy.ldm.minimax.model as mm
+
+        cls = getattr(mm, "PackedLayout", None)
+        current = getattr(cls, "__init__", None) if cls is not None else None
+        if current is None:
+            return False
+
+        params = inspect.signature(current).parameters
+        return "frame_count" not in params
+    except Exception:
+        # If detection fails, keep the legacy compatibility behavior rather
+        # than assuming a new core.  The wrapper below is also audio-safe.
+        return False
+
+
 def _ensure_h3_keyframe_ref_merge():
     """Let this pack's keyframes and Ref2VA refs coexist on older ComfyUI.
 
@@ -251,7 +279,18 @@ def _ensure_h3_keyframe_ref_merge():
     wrong rows. Rebuild the list in layout order: keyframes first, refs second.
 
     This wrapper is deliberately scoped to keyframes produced by this pack.
+
+    ComfyUI v0.34+ already performs this merge natively.  On that API we do
+    nothing, which is important because native Add Guide keyframes may contain
+    audio latents that the historical workaround did not know about.
     """
+    if _h3_has_native_arbitrary_keyframes():
+        _LOG.info(
+            "MiniMax H3 payload patch: native v0.34+ keyframe/reference merge detected; "
+            "legacy patch not installed."
+        )
+        return True
+
     try:
         import comfy.model_base as model_base
     except Exception as e:
@@ -289,11 +328,21 @@ def _ensure_h3_keyframe_ref_merge():
             [kf["latent"] for kf in keyframes if isinstance(kf, dict) and "latent" in kf]
             + [ref["latent"] for ref in refs if isinstance(ref, dict) and "latent" in ref]
         )
-        payload["cond_audio_latents"] = [
-            ref["audio_latent"]
-            for ref in refs
-            if isinstance(ref, dict) and ref.get("audio_latent") is not None
-        ]
+        # Preserve audio carried by keyframes as well as Ref2VA references.
+        # This makes the legacy fallback safe if keyframes from an Add Guide
+        # node are chained together with this node's marked keyframes.
+        payload["cond_audio_latents"] = (
+            [
+                kf["audio_latent"]
+                for kf in keyframes
+                if isinstance(kf, dict) and kf.get("audio_latent") is not None
+            ]
+            + [
+                ref["audio_latent"]
+                for ref in refs
+                if isinstance(ref, dict) and ref.get("audio_latent") is not None
+            ]
+        )
 
         frame_count = kwargs.get("minimax_frame_count", None)
         if frame_count is not None:
@@ -855,7 +904,11 @@ class MiniMaxH3CombinedImageAndReferenceToVideo(io.ComfyNode):
             for kf in keyframes:
                 kf["latent"] = vae.encode(kf.pop("image"))
             payload["minimax_keyframes"] = keyframes
-            payload["minimax_frame_count"] = frame_count
+            # Legacy PackedLayout needed frame_count for endpoint/interior repair.
+            # ComfyUI v0.34+ no longer consumes this field and handles arbitrary
+            # guide positions natively, so keep it out of the native payload.
+            if not _h3_has_native_arbitrary_keyframes():
+                payload["minimax_frame_count"] = frame_count
         if ref_blocks:
             payload["minimax_refs"] = ref_blocks
         if payload:
